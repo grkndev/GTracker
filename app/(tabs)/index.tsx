@@ -19,7 +19,7 @@ export default function Home() {
           </View>
           <View className="h-3 w-full " />
         </Card>
-        <View className="flex-auto px-8 py-4 flex flex-col items-start justify-center gap-4 border-zinc-100 border rounded-3xl">
+        <View className="flex-auto px-8 py-4 flex flex-col items-start justify-center gap-4 border-zinc-200 border rounded-3xl">
           <View className="flex-row justify-between items-center w-full">
             <Text className="text-zinc-400">Favori çalışma konusu</Text>
             <Icons name="BookHeart" size={20} color="#a1a1aa" />
@@ -29,7 +29,7 @@ export default function Home() {
           </View>
         </View>
         <View className="flex flex-row w-full gap-4">
-          <View className="flex-auto px-8 py-4 flex flex-col items-center justify-center gap-4 border-zinc-100 border rounded-3xl">
+          <View className="flex-auto px-8 py-4 flex flex-col items-center justify-center gap-4 border-zinc-200 border rounded-3xl">
             <View className="flex-row justify-between items-center w-full">
               <Text className="text-zinc-400">Soru sayısı</Text>
               <Icons name="Rocket" size={16} color="#a1a1aa" />
@@ -40,7 +40,7 @@ export default function Home() {
             </View>
 
           </View>
-          <View className="flex-auto px-8 py-4 flex flex-col items-center justify-center gap-4 border-zinc-100 border rounded-3xl">
+          <View className="flex-auto px-8 py-4 flex flex-col items-center justify-center gap-4 border-zinc-200 border rounded-3xl">
             <View className="flex-row justify-between items-center w-full">
               <Text className="text-zinc-400">Günlük Seri</Text>
               <Icons name="Flame" size={16} color="#a1a1aa" />
@@ -52,7 +52,7 @@ export default function Home() {
 
           </View>
         </View>
-        <View className="flex-auto px-8 py-4 flex flex-col items-start justify-center gap-4 border-zinc-100 border rounded-3xl">
+        <View className="flex-auto px-8 py-4 flex flex-col items-start justify-center gap-4 border-zinc-200 border rounded-3xl">
           <View className="flex-row justify-between items-center w-full">
             <Text className="text-zinc-400">En çok çözülen ders</Text>
             <Icons name="GraduationCap" size={20} color="#a1a1aa" />
