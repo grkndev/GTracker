@@ -16,31 +16,40 @@ export default function TimeCard() {
                 <Icons name="Timer" size={20} color="#a1a1aa" />
             </View>
             <View className="flex flex-col items-center gap-y-2 justify-center">
-                <Text variant="5xl" bold>{time ?? "00:00:00"}</Text>
-                <Text className="text-zinc-400">16 saat mi? Aman tanrım sen insan mısın?</Text>
+                {
+                    time ? (
+                        <>
+                            <Text variant="5xl" bold>{time}</Text>
+                            <Text className="text-zinc-400">16 saat mi? Aman tanrım sen insan mısın?</Text></>
+                    ) : (
+                        <View className='py-[6px] items-center'>
+                            <Text variant="3xl" bold>Aktif sayacınız yok</Text>
+                            <Text className="text-zinc-400">Hadi biraz çalışalım?</Text></View>
+                    )
+                }
             </View>
             <View className="w-full flex flex-row items-center justify-center gap-4">
                 {
                     time ? (
                         isPaused ? (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => {
                                     timerRef.current.start((time) => {
                                         setTime(time);
                                     });
                                     setIsPaused(false);
-                                }} 
+                                }}
                                 className="bg-green-400 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                             >
                                 <Icons name="CirclePlay" size={20} color="#fff" />
                                 <Text variant="sm" className="text-white">Devam Et</Text>
                             </TouchableOpacity>
                         ) : (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => {
                                     timerRef.current.stop();
                                     setIsPaused(true);
-                                }} 
+                                }}
                                 className="bg-zinc-200 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                             >
                                 <Icons name="CirclePause" size={20} color="#27272a" />
@@ -48,38 +57,40 @@ export default function TimeCard() {
                             </TouchableOpacity>
                         )
                     ) : (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => {
                                 timerRef.current.reset();
                                 timerRef.current.start((time) => {
                                     setTime(time);
                                 });
                                 setIsPaused(false);
-                            }} 
-                            className="bg-green-400 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
+                            }}
+                            className="py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                         >
-                            <Icons name="CirclePlay" size={20} color="#fff" />
-                            <Text variant="sm" className="text-white">Başlat</Text>
+                            <View className='-top-1'>
+                                <Icons name="CirclePlay" size={24} color="#3b82f6" />
+                            </View>
+                            <Text variant="xl" className="text-blue-500">Başlat</Text>
                         </TouchableOpacity>
                     )
                 }
                 {
-                    time && <TouchableOpacity 
+                    time && <TouchableOpacity
                         onPress={() => {
                             // Önce tüm istatistikleri hesapla
                             const totalTimeWithPauses = timerRef.current.getTotalElapsedTimeWithPauses();
                             const activeTime = timerRef.current.getTotalActiveTime();
-                            
+
                             // Sonuçları konsola yazdır
                             console.log('Toplam geçen süre (durdurma süreleri dahil):', totalTimeWithPauses);
                             console.log('Aktif çalışma süresi (durdurma süreleri hariç):', activeTime);
-                            
+
                             // Timer'ı durdur ve sıfırla
                             timerRef.current.stop();
                             timerRef.current.reset();
                             setTime(null);
                             setIsPaused(false);
-                        }} 
+                        }}
                         className="bg-red-400 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                     >
                         <Icons name="CircleStop" size={20} color="#fff" />
