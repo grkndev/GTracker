@@ -3,7 +3,7 @@ import { Text as RNText, TextProps as RNTextProps, StyleSheet } from 'react-nati
 import { typography, combineTextStyles } from '@/utils/typography';
 
 export interface TextProps extends RNTextProps {
-  variant?: 'sm' | 'base' | 'lg' | 'xl' | '2xl';
+  variant?: 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | '8xl' | '9xl';
   bold?: boolean;
   style?: RNTextProps['style'];
 }
@@ -26,6 +26,20 @@ export const Text: React.FC<TextProps> = ({
         return typography.textXl;
       case '2xl':
         return typography.text2Xl;
+      case '3xl':
+        return typography.text3Xl;
+      case '4xl':
+        return typography.text4Xl;
+      case '5xl':
+        return typography.text5Xl;
+      case '6xl':
+        return typography.text6Xl;
+      case '7xl':
+        return typography.text7Xl;
+      case '8xl':
+        return typography.text8Xl;
+      case '9xl':
+        return typography.text9Xl;
       default:
         return typography.textBase;
     }

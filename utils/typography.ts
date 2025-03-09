@@ -31,6 +31,34 @@ export const typography = StyleSheet.create({
     fontSize: 24,
     lineHeight: 32,
   },
+  text3Xl: {
+    fontSize: 30,
+    lineHeight: 38,
+  },
+  text4Xl: {
+    fontSize: 36,
+    lineHeight: 42,
+  },
+  text5Xl: {
+    fontSize: 48,
+    lineHeight: 52,
+  },
+  text6Xl: {
+    fontSize: 64,
+    lineHeight: 68,
+  },
+  text7Xl: {
+    fontSize: 80,
+    lineHeight: 84,
+  },
+  text8Xl: {
+    fontSize: 96,
+    lineHeight: 100,
+  },
+  text9Xl: {
+    fontSize: 128,
+    lineHeight: 132,
+  },
 });
 
 // Helper function to combine multiple text styles

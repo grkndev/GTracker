@@ -8,7 +8,7 @@ interface IconProps {
     color?: string,
 }
 const Icons = (
-    { name, size = 24, color = '#fff', ...props }: IconProps & SvgProps
+    { name, size = 24, color = '#000', ...props }: IconProps & SvgProps
 ) => {
     const LucideIcon = icons[name]
     return <LucideIcon size={size} color={color} {...props} />
