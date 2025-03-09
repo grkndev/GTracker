@@ -7,3 +7,4 @@ export function cn(...classes: (string | boolean | undefined)[]) {
 export function truncate(str: string, max: number, len: number) {
     return str.length > max ? str.substring(0, len) + "..." : str;
 }
+
