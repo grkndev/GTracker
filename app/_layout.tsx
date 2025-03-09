@@ -1,4 +1,4 @@
-import "./global.css"
+import "@/global.css"
 import 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -11,8 +11,8 @@ import { useFonts } from "expo-font"
 SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded] = useFonts({
-    "SF-Pro": require("./assets/fonts/SF-Pro-Display-Regular.otf"),
-    "SF-Pro-Bold": require("./assets/fonts/SF-Pro-Display-Bold.otf"),
+    "SF-Pro": require("@/assets/fonts/SF-Pro-Display-Regular.otf"),
+    "SF-Pro-Bold": require("@/assets/fonts/SF-Pro-Display-Bold.otf"),
   });
   useEffect(() => {
     if (loaded) {
