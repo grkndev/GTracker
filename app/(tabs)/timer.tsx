@@ -1,9 +1,9 @@
 import { Text, View } from "react-native";
 
-export default function SettingsScreen() {
+export default function TimerScreen() {
   return (
     <View>
-      <Text>Settings</Text>
+      <Text>timer</Text>
     </View>
   )
 }

@@ -41,12 +41,11 @@ const TabBarComponent = ({ state, descriptors, navigation }: BottomTabBarProps) 
                     <Icons name={"House"} color={currentRoute === 'index' ? '#000' : '#a1a1aa'} />
                 </TouchableOpacity>
 
-                {/* STATS */}
+                {/* Timer */}
                 <TouchableOpacity
-                    onPress={() => navigation.navigate("stats")}
-                    className={`flex h-full w-1/5 items-center justify-center`}>
-
-                    <Icons name={"ChartArea"} color={currentRoute === 'stats' ? '#000' : '#a1a1aa'} />
+                    onPress={() => navigation.navigate("timer")}
+                    className={` flex h-full w-1/5 items-center justify-center`}>
+                    <Icons name={"Timer"} color={currentRoute === 'timer' ? '#000' : '#a1a1aa'} />
                 </TouchableOpacity>
 
                 {/* ADD */}
@@ -61,7 +60,13 @@ const TabBarComponent = ({ state, descriptors, navigation }: BottomTabBarProps) 
                         </View>
                     </View>
                 </TouchableOpacity>
+                {/* STATS */}
+                <TouchableOpacity
+                    onPress={() => navigation.navigate("stats")}
+                    className={`flex h-full w-1/5 items-center justify-center`}>
 
+                    <Icons name={"ChartArea"} color={currentRoute === 'stats' ? '#000' : '#a1a1aa'} />
+                </TouchableOpacity>
                 {/* LECTURES */}
                 <TouchableOpacity
                     onPress={() => navigation.navigate("lectures")}
@@ -71,12 +76,7 @@ const TabBarComponent = ({ state, descriptors, navigation }: BottomTabBarProps) 
                     <Icons name={"Book"} color={currentRoute === 'lectures' ? '#000' : '#a1a1aa'} />
                 </TouchableOpacity>
 
-                {/* SETTINGS */}
-                <TouchableOpacity
-                    onPress={() => navigation.navigate("settings")}
-                    className={` flex h-full w-1/5 items-center justify-center`}>
-                    <Icons name={"Settings"} color={currentRoute === 'settings' ? '#000' : '#a1a1aa'} />
-                </TouchableOpacity>
+
 
             </View>)}</>
     )

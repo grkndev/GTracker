@@ -12,7 +12,7 @@ export default function TabLayout() {
         tabBar={props => <TabBar {...props} />}
         initialRouteName='index'
         screenOptions={{
-          animation:"shift",
+          // animation:"none",
           tabBarHideOnKeyboard: true,
           headerShown: false,
         }}
