@@ -1,6 +1,6 @@
 import HeadBar from "@/components/HeadBar";
 import Icons from "@/lib/Icons";
-import { View } from "react-native";
+import { TouchableHighlight, TouchableOpacity, View } from "react-native";
 import { Text, Card } from '@ui/index'
 
 export default function Home() {
@@ -17,7 +17,16 @@ export default function Home() {
             <Text variant="5xl" bold>16sa 47dk</Text>
             <Text className="text-zinc-400">16 saat mi? Aman tanrım sen insan mısın?</Text>
           </View>
-          <View className="h-3 w-full " />
+          <View className="w-full flex flex-row items-center justify-center gap-4">
+            <TouchableOpacity className="bg-zinc-200 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl">
+              <Icons name="CirclePause" size={20} color="#27272a" />
+              <Text variant="sm" className="text-zinc-800">Durdur</Text>
+            </TouchableOpacity>
+            <TouchableOpacity className="bg-red-400 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl">
+              <Icons name="CircleStop" size={20} color="#fff" />
+              <Text variant="sm" className="text-white">Bitir</Text>
+            </TouchableOpacity>
+          </View>
         </Card>
         <View className="flex-auto px-8 py-4 flex flex-col items-start justify-center gap-4 border-zinc-200 border rounded-3xl">
           <View className="flex-row justify-between items-center w-full">
