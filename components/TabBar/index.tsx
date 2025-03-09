@@ -36,63 +36,47 @@ const TabBarComponent = ({ state, descriptors, navigation }: BottomTabBarProps) 
                 {/* HOME */}
                 <TouchableOpacity
                     onPress={() => navigation.navigate("index")}
-                    className={`flex h-full w-1/4 items-center justify-center $`}>
+                    className={`flex h-full w-1/5 items-center justify-center $`}>
 
-                    <Icons name={"House"} color={currentRoute === 'index' ? '#FA0250' : '#a1a1aa'} />
-                    <Text
-                        className={
-                            cn(
-                                'text-xs ',
-                                currentRoute === 'index' ? ' font-bold text-[#FA0250]' : 'text-zinc-400'
-                            )
-
-                        }>Yemek</Text>
+                    <Icons name={"House"} color={currentRoute === 'index' ? '#000' : '#a1a1aa'} />
                 </TouchableOpacity>
 
-                {/* MAHALLE */}
+                {/* Timer */}
                 <TouchableOpacity
-                    onPress={() => navigation.navigate("mahalle")}
-                    className={`flex h-full w-1/4 items-center justify-center`}>
-
-                    <Icons name={"Store"} color={currentRoute === 'mahalle' ? '#FA0250' : '#a1a1aa'} />
-                    <Text
-                        className={
-
-                            cn(
-                                'text-xs',
-                                currentRoute === 'mahalle' ? ' font-bold text-[#FA0250]' : 'text-zinc-400'
-                            )
-                        }>Mahalle</Text>
+                    onPress={() => navigation.navigate("timer")}
+                    className={` flex h-full w-1/5 items-center justify-center`}>
+                    <Icons name={"Timer"} color={currentRoute === 'timer' ? '#000' : '#a1a1aa'} />
                 </TouchableOpacity>
 
-                {/* EXPLORE */}
+                {/* ADD */}
                 <TouchableOpacity
-                    onPress={() => navigation.navigate("explore")}
+                    // onPress={() => navigation.navigate("stats")}
+                    className={`flex h-full w-1/5 items-center justify-center`}>
+
+                    <View className='flex flex-row items-center justify-center relative'>
+                        <Icons name={"Plus"} color={'#fff'} />
+                        <View className='absolute -z-10' >
+                            <Icons size={48} name={"Hexagon"} color={'#000'} fill={"#000"} />
+                        </View>
+                    </View>
+                </TouchableOpacity>
+                {/* STATS */}
+                <TouchableOpacity
+                    onPress={() => navigation.navigate("stats")}
+                    className={`flex h-full w-1/5 items-center justify-center`}>
+
+                    <Icons name={"ChartArea"} color={currentRoute === 'stats' ? '#000' : '#a1a1aa'} />
+                </TouchableOpacity>
+                {/* LECTURES */}
+                <TouchableOpacity
+                    onPress={() => navigation.navigate("lectures")}
                     className={
-                        `flex h-full w-1/4 items-center justify-center`
+                        `flex h-full w-1/5 items-center justify-center`
                     }>
-                    <Icons name={"Search"} color={currentRoute === 'explore' ? '#FA0250' : '#a1a1aa'} />
-
-                    <Text className={
-                        cn(
-                            'text-xs',
-                            currentRoute === 'explore' ? 'font-bold text-[#FA0250]' : 'text-zinc-400'
-                        )
-                    }>Arama</Text>
+                    <Icons name={"Book"} color={currentRoute === 'lectures' ? '#000' : '#a1a1aa'} />
                 </TouchableOpacity>
 
-                {/* PROFILE */}
-                <TouchableOpacity
-                    onPress={() => navigation.navigate("profile")}
-                    className={` flex h-full w-1/4 items-center justify-center`}>
-                    <Icons name={"UserRound"} color={currentRoute === 'profile' ? '#FA0250' : '#a1a1aa'} />
-                    <Text className={
-                        cn(
-                            'text-xs',
-                            currentRoute === 'profile' ? ' font-bold text-[#FA0250]' : 'text-zinc-400'
-                        )
-                    }>Hesabım</Text>
-                </TouchableOpacity>
+
 
             </View>)}</>
     )

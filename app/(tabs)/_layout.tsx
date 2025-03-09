@@ -1,21 +1,22 @@
 import React from 'react';
 import TabBar from '@/components/TabBar';
 import { Tabs } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 export default function TabLayout() {
   return (
-    <Tabs
-      tabBar={props => <TabBar {...props} />}
-      screenOptions={{
-        tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: "#FA0250",
-        headerShown: false,
-        tabBarStyle: {
-          height: 64,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-      }}
-    />
+    <SafeAreaView className='flex-1 bg-white'>
+      <StatusBar style='dark' />
+      <Tabs
+        tabBar={props => <TabBar {...props} />}
+        initialRouteName='index'
+        screenOptions={{
+          // animation:"none",
+          tabBarHideOnKeyboard: true,
+          headerShown: false,
+        }}
+      />
+    </SafeAreaView>
   );
 }
