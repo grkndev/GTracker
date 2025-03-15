@@ -1,4 +1,6 @@
 // lib/Timer.ts
+import { formatMsToTime, formatSecondsToTime } from '../utils/timeUtils';
+
 export class Timer {
     private startTime: number;
     private interval: NodeJS.Timeout | null;
@@ -7,25 +9,31 @@ export class Timer {
     private elapsedBeforePause: number;
     private isRunning: boolean;
     private initialStartTime: number; // Başlangıç zamanını saklayacak yeni değişken
+    private currentSeconds: number; // Current time in seconds
 
     constructor() {
         this.startTime = Date.now();
         this.initialStartTime = Date.now(); // İlk başlangıç zamanını da kaydet
         this.currentTime = "00:00:00";
+        this.currentSeconds = 0;
         this.interval = null;
         this.elapsedBeforePause = 0;
         this.isRunning = false;
     }
 
-    private formatTime(ms: number): string {
-        const totalSeconds = Math.floor(ms / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-
-        const pad = (num: number): string => num.toString().padStart(2, '0');
-        
-        return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    /**
+     * Returns whether the timer is currently running
+     */
+    public getIsRunning(): boolean {
+        return this.isRunning;
+    }
+    
+    /**
+     * Alternate method to check if timer is running
+     * This method is provided for compatibility
+     */
+    public checkIsRunning(): boolean {
+        return this.isRunning;
     }
 
     public start(callback: (time: string) => void): void {
@@ -49,7 +57,8 @@ export class Timer {
         this.interval = setInterval(() => {
             const currentElapsed = Date.now() - this.startTime;
             const totalElapsed = this.elapsedBeforePause + currentElapsed;
-            this.currentTime = this.formatTime(totalElapsed);
+            this.currentSeconds = Math.floor(totalElapsed / 1000);
+            this.currentTime = formatMsToTime(totalElapsed);
             
             if (this.onTimeUpdate) {
                 this.onTimeUpdate(this.currentTime);
@@ -80,6 +89,7 @@ export class Timer {
         this.startTime = Date.now();
         this.initialStartTime = Date.now(); // Sıfırlarken ilk başlangıç zamanını da güncelle
         this.currentTime = "00:00:00";
+        this.currentSeconds = 0;
         this.elapsedBeforePause = 0;
         this.isRunning = false;
         
@@ -92,11 +102,27 @@ export class Timer {
         return this.currentTime;
     }
     
+    /**
+     * Gets the current time in seconds for database storage
+     */
+    public getCurrentTimeInSeconds(): number {
+        return this.currentSeconds;
+    }
+    
     // Başlangıçtan bu yana geçen toplam süreyi hesaplar (durdurma süreleri dahil)
     public getTotalElapsedTimeWithPauses(): string {
         const now = Date.now();
         const totalRealElapsed = now - this.initialStartTime;
-        return this.formatTime(totalRealElapsed);
+        return formatMsToTime(totalRealElapsed);
+    }
+    
+    /**
+     * Gets the total elapsed time including pauses in seconds
+     */
+    public getTotalElapsedTimeWithPausesInSeconds(): number {
+        const now = Date.now();
+        const totalRealElapsed = now - this.initialStartTime;
+        return Math.floor(totalRealElapsed / 1000);
     }
     
     // Toplam aktif çalışma süresini döndürür (durdurma süreleri hariç)
@@ -107,7 +133,20 @@ export class Timer {
             totalActiveTime += (Date.now() - this.startTime);
         }
         
-        return this.formatTime(totalActiveTime);
+        return formatMsToTime(totalActiveTime);
+    }
+    
+    /**
+     * Gets the total active time in seconds for database storage
+     */
+    public getTotalActiveTimeInSeconds(): number {
+        let totalActiveTime = this.elapsedBeforePause;
+        
+        if (this.isRunning) {
+            totalActiveTime += (Date.now() - this.startTime);
+        }
+        
+        return Math.floor(totalActiveTime / 1000);
     }
 }
 

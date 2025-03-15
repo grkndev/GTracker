@@ -1,13 +1,11 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import Icons from "@/lib/Icons";
 import { TouchableOpacity, View } from "react-native";
 import { Text, Card } from '@ui/index'
-import Timer from '@/lib/Timer';
+import { useTimer } from '@/lib/TimerContext';
 
 export default function TimeCard() {
-    const [time, setTime] = React.useState<string | null>(null);
-    const [isPaused, setIsPaused] = React.useState<boolean>(false);
-    const timerRef = useRef<Timer>(new Timer());
+    const { time, isPaused, startTimer, stopTimer, resetTimer, finishTimer } = useTimer();
 
     return (
         <Card>
@@ -33,12 +31,7 @@ export default function TimeCard() {
                     time ? (
                         isPaused ? (
                             <TouchableOpacity
-                                onPress={() => {
-                                    timerRef.current.start((time) => {
-                                        setTime(time);
-                                    });
-                                    setIsPaused(false);
-                                }}
+                                onPress={startTimer}
                                 className="bg-green-400 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                             >
                                 <Icons name="CirclePlay" size={20} color="#fff" />
@@ -46,10 +39,7 @@ export default function TimeCard() {
                             </TouchableOpacity>
                         ) : (
                             <TouchableOpacity
-                                onPress={() => {
-                                    timerRef.current.stop();
-                                    setIsPaused(true);
-                                }}
+                                onPress={stopTimer}
                                 className="bg-zinc-200 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                             >
                                 <Icons name="CirclePause" size={20} color="#27272a" />
@@ -58,13 +48,7 @@ export default function TimeCard() {
                         )
                     ) : (
                         <TouchableOpacity
-                            onPress={() => {
-                                timerRef.current.reset();
-                                timerRef.current.start((time) => {
-                                    setTime(time);
-                                });
-                                setIsPaused(false);
-                            }}
+                            onPress={resetTimer}
                             className="py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                         >
                             <View className='-top-1'>
@@ -76,21 +60,7 @@ export default function TimeCard() {
                 }
                 {
                     time && <TouchableOpacity
-                        onPress={() => {
-                            // Önce tüm istatistikleri hesapla
-                            const totalTimeWithPauses = timerRef.current.getTotalElapsedTimeWithPauses();
-                            const activeTime = timerRef.current.getTotalActiveTime();
-
-                            // Sonuçları konsola yazdır
-                            console.log('Toplam geçen süre (durdurma süreleri dahil):', totalTimeWithPauses);
-                            console.log('Aktif çalışma süresi (durdurma süreleri hariç):', activeTime);
-
-                            // Timer'ı durdur ve sıfırla
-                            timerRef.current.stop();
-                            timerRef.current.reset();
-                            setTime(null);
-                            setIsPaused(false);
-                        }}
+                        onPress={finishTimer}
                         className="bg-red-400 py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                     >
                         <Icons name="CircleStop" size={20} color="#fff" />

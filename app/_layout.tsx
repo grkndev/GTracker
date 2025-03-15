@@ -8,6 +8,8 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { useFonts } from "expo-font"
+import { TimerProvider } from '@/lib/TimerContext';
+
 SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded] = useFonts({
@@ -25,11 +27,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <BottomSheetModalProvider>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false,animation: "simple_push" }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
+        <TimerProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false,animation: "simple_push" }} />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </TimerProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );

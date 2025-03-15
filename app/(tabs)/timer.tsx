@@ -1,15 +1,17 @@
 import { View } from 'react-native'
-import React, { useRef } from 'react'
+import React from 'react'
 import { Text } from '@ui/index'
 import Icons from "@/lib/Icons";
 import TimeCard from '@/components/TimeCard';
-import Timer from '@/lib/Timer';
+import { useTimer } from '@/lib/TimerContext';
 
 export default function TimerScreen() {
-  // const timerRef = useRef<Timer>(new Timer);
+  // Using the shared timer context
+  const { time, subjectTime, breakTime } = useTimer();
+  
   return (
     <View className="flex-1 bg-white flex flex-col gap-6 px-6 pt-8">
-      <TimeCard  />
+      <TimeCard />
       <View className='gap-4'>
         <View className="flex-auto px-8 py-4 flex flex-col items-start justify-center gap-4 border-zinc-200 border rounded-3xl">
           <View className="flex-row justify-between items-center w-full">
@@ -27,9 +29,8 @@ export default function TimerScreen() {
               <Icons name="Rocket" size={16} color="#a1a1aa" />
             </View>
             <View className="flex flex-col items-center gap-y-2 justify-center">
-              <Text variant="4xl" bold>10:01:50</Text>
+              <Text variant="4xl" bold>{time ? subjectTime : "00:00:00"}</Text>
             </View>
-
           </View>
           <View className="flex-auto px-8 py-4 flex flex-col items-start justify-center gap-4 border-zinc-200 border rounded-3xl">
             <View className="flex-row justify-between items-center w-full">
@@ -37,9 +38,8 @@ export default function TimerScreen() {
               <Icons name="Flame" size={16} color="#a1a1aa" />
             </View>
             <View className="flex flex-col items-center gap-y-2 justify-center">
-              <Text variant="4xl" bold>01:10:24</Text>
+              <Text variant="4xl" bold>{time ? breakTime : "00:00:00"}</Text>
             </View>
-
           </View>
         </View>
         <View className="flex-auto px-8 py-4 flex flex-col items-start justify-center gap-4 border-zinc-200 border rounded-3xl">
