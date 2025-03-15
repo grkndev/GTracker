@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useState, ReactNode, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useRef, useState, ReactNode, useCallback, useEffect, useMemo } from 'react';
 import Timer from './Timer';
 import { formatSecondsToTime } from '../utils/timeUtils';
 
@@ -7,8 +7,7 @@ interface TimerContextType {
   timer: Timer;
   time: string | null;
   isPaused: boolean;
-  subjectTime: string; // Subject timer - active when main timer is active
-  breakTime: string;   // Break timer - active when main timer is paused
+  breakTime: string;   // Break timer - calculated as total time minus active time
   startTimer: () => void;
   stopTimer: () => void;
   resetTimer: () => void;
@@ -21,6 +20,16 @@ const TimerContext = createContext<TimerContextType | null>(null);
 // Create a provider component
 interface TimerProviderProps {
   children: ReactNode;
+}
+
+// Timer data interface for better type safety
+interface TimerData {
+  startTime: number;
+  pauseStartTime: number;
+  totalPauseTime: number;
+  totalBreakTime: number; // Track total break time directly for more accuracy
+  lastUpdateTime: number;
+  isRunning: boolean;
 }
 
 // Helper function to safely check if timer is running
@@ -45,208 +54,265 @@ const isTimerRunning = (timer: Timer): boolean => {
 export const TimerProvider = ({ children }: TimerProviderProps) => {
   const [time, setTime] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [subjectTime, setSubjectTime] = useState<string>("00:00:00");
   const [breakTime, setBreakTime] = useState<string>("00:00:00");
+  const [breakSeconds, setBreakSeconds] = useState<number>(0); // Track break seconds separately for consistency
+  
+  // Reference to break interval
+  const breakIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Ref to hold timer tracking data for more precise timing
-  const timerDataRef = useRef({
+  const timerDataRef = useRef<TimerData>({
     startTime: 0,
     pauseStartTime: 0,
     totalPauseTime: 0,
-    totalSubjectTime: 0,
     totalBreakTime: 0,
+    lastUpdateTime: 0,
     isRunning: false
   });
   
+  // Use a stable reference for the Timer object
   const timerRef = useRef<Timer>(new Timer());
   
-  // Function to calculate and update all timer displays simultaneously
-  const updateAllTimers = useCallback(() => {
-    if (!timerDataRef.current.isRunning) return;
-    
-    const now = Date.now();
-    const timerData = timerDataRef.current;
-    
-    if (isPaused) {
-      // Update break time
-      const currentBreakDuration = now - timerData.pauseStartTime;
-      const totalBreakSeconds = Math.floor((timerData.totalBreakTime + currentBreakDuration) / 1000);
-      const formattedBreakTime = formatSecondsToTime(totalBreakSeconds);
-      setBreakTime(formattedBreakTime);
-    } else {
-      // Calculate total elapsed time excluding pauses
-      const elapsedSinceStart = now - timerData.startTime - timerData.totalPauseTime;
-      const totalSubjectSeconds = Math.floor(elapsedSinceStart / 1000);
-      const formattedSubjectTime = formatSecondsToTime(totalSubjectSeconds);
-      setSubjectTime(formattedSubjectTime);
+  // Function to calculate break time based on absolute values
+  // This uses totalBreakTime and increments it during pauses
+  const calculateBreakTime = useCallback((): { 
+    formattedTime: string, 
+    seconds: number 
+  } => {
+    if (!timerDataRef.current.isRunning) {
+      return { formattedTime: "00:00:00", seconds: 0 };
     }
+    
+    let breakTimeSeconds = Math.floor(timerDataRef.current.totalBreakTime / 1000);
+    
+    // If currently paused, add the current pause duration
+    if (isPaused && timerDataRef.current.pauseStartTime > 0) {
+      const currentPauseDuration = Date.now() - timerDataRef.current.pauseStartTime;
+      breakTimeSeconds = Math.floor((timerDataRef.current.totalBreakTime + currentPauseDuration) / 1000);
+    }
+    
+    return { 
+      formattedTime: formatSecondsToTime(breakTimeSeconds), 
+      seconds: breakTimeSeconds 
+    };
   }, [isPaused]);
   
-  // Set up interval to update all timers
-  useEffect(() => {
-    if (time === null) return;
+  // Function to start the break timer interval with a shorter interval for smoother updates
+  const startBreakInterval = useCallback(() => {
+    // Clear any existing interval first
+    if (breakIntervalRef.current) {
+      clearInterval(breakIntervalRef.current);
+    }
     
-    const intervalId = setInterval(() => {
-      updateAllTimers();
-    }, 100); // Update more frequently for better synchronization
+    // Update immediately to prevent delay
+    const { formattedTime, seconds } = calculateBreakTime();
+    setBreakTime(formattedTime);
+    setBreakSeconds(seconds);
     
-    return () => clearInterval(intervalId);
-  }, [time, isPaused, updateAllTimers]);
+    // Create a new interval that updates more frequently (250ms)
+    breakIntervalRef.current = setInterval(() => {
+      const { formattedTime, seconds } = calculateBreakTime();
+      // Only update if seconds changed to prevent unnecessary renders
+      if (seconds !== breakSeconds) {
+        setBreakTime(formattedTime);
+        setBreakSeconds(seconds);
+      }
+    }, 250); // More frequent updates for smoother counting
+  }, [calculateBreakTime, breakSeconds]);
   
-  // Start the timer
+  // Function to stop the break timer interval
+  const stopBreakInterval = useCallback(() => {
+    if (breakIntervalRef.current) {
+      clearInterval(breakIntervalRef.current);
+      breakIntervalRef.current = null;
+    }
+  }, []);
+  
+  // Update break time when necessary - using the main timer's callback to sync updates
+  useEffect(() => {
+    // When time changes (which happens every second via the main timer),
+    // update the break time only when not paused
+    if (time !== null && !isPaused) {
+      const { formattedTime, seconds } = calculateBreakTime();
+      // Only update if seconds changed
+      if (seconds !== breakSeconds) {
+        setBreakTime(formattedTime);
+        setBreakSeconds(seconds);
+      }
+    }
+  }, [time, isPaused, calculateBreakTime, breakSeconds]);
+  
+  // Manage break timer interval based on pause state
+  useEffect(() => {
+    // If timer is active (time !== null)
+    if (time !== null) {
+      if (isPaused) {
+        // Start the break interval when paused
+        startBreakInterval();
+      } else {
+        // Stop the break interval when running
+        stopBreakInterval();
+      }
+    } else {
+      // If timer is not active, ensure break interval is stopped
+      stopBreakInterval();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      stopBreakInterval();
+    };
+  }, [isPaused, time, startBreakInterval, stopBreakInterval]);
+  
+  // Start the timer - optimized with better handling of elapsed time
   const startTimer = useCallback(() => {
     const now = Date.now();
     
     if (isPaused) {
-      // Coming back from a pause
+      // Coming back from a pause - precisely calculate the pause duration
       const pauseDuration = now - timerDataRef.current.pauseStartTime;
       timerDataRef.current.totalPauseTime += pauseDuration;
+      
+      // Add the pause duration to total break time for accurate tracking
       timerDataRef.current.totalBreakTime += pauseDuration;
+      
+      // Stop the break interval as we're resuming
+      stopBreakInterval();
     } else {
-      // First start
+      // First start - reset all counters
       timerDataRef.current.startTime = now;
       timerDataRef.current.totalPauseTime = 0;
-      timerDataRef.current.totalSubjectTime = 0;
       timerDataRef.current.totalBreakTime = 0;
     }
     
+    timerDataRef.current.lastUpdateTime = now;
     timerDataRef.current.isRunning = true;
     
-    // Start main timer
+    // Start main timer with batched state updates
     timerRef.current.start((updatedTime) => {
+      // Using the main timer value for everything
       setTime(updatedTime);
     });
     
     setIsPaused(false);
-    updateAllTimers();
-  }, [isPaused, updateAllTimers]);
+    // Break time will be updated via the effect when time changes
+  }, [isPaused, stopBreakInterval]);
 
   // Stop (pause) the timer
   const stopTimer = useCallback(() => {
+    const now = Date.now();
+    
     if (!isPaused) {
-      timerDataRef.current.pauseStartTime = Date.now();
+      timerDataRef.current.pauseStartTime = now;
+      
+      // Start the break interval to continuously update break time
+      startBreakInterval();
     }
     
     // Stop main timer
     timerRef.current.stop();
     setIsPaused(true);
-    updateAllTimers();
-  }, [isPaused, updateAllTimers]);
+    
+    // Update break time immediately when pausing
+    const { formattedTime, seconds } = calculateBreakTime();
+    setBreakTime(formattedTime);
+    setBreakSeconds(seconds);
+  }, [isPaused, calculateBreakTime, startBreakInterval]);
 
   // Reset the timer
   const resetTimer = useCallback(() => {
     const now = Date.now();
     
-    // Reset timing data
+    // Stop any break interval
+    stopBreakInterval();
+    
+    // Reset timing data with a clean object
     timerDataRef.current = {
       startTime: now,
       pauseStartTime: 0,
       totalPauseTime: 0,
-      totalSubjectTime: 0,
       totalBreakTime: 0,
+      lastUpdateTime: now,
       isRunning: true
     };
     
     // Reset main timer
     timerRef.current.reset();
-    timerRef.current.start((updatedTime) => {
-      setTime(updatedTime);
-    });
     
-    // Reset timer displays
-    setSubjectTime("00:00:00");
+    // Reset break time
     setBreakTime("00:00:00");
+    setBreakSeconds(0);
     setIsPaused(false);
-    updateAllTimers();
-  }, [updateAllTimers]);
+    
+    // Start the timer after a small delay to ensure clean state
+    setTimeout(() => {
+      timerRef.current.start((updatedTime) => {
+        setTime(updatedTime);
+      });
+      // Break time will be updated via the effect
+    }, 50);
+  }, [stopBreakInterval]);
 
   // Finish and log the timer
   const finishTimer = useCallback(() => {
-    const now = Date.now();
-    const timerData = timerDataRef.current;
-    let finalSubjectSeconds = 0;
-    let finalBreakSeconds = 0;
+    // Stop any break interval
+    stopBreakInterval();
     
-    // Calculate final times
-    if (isPaused) {
-      // If we're paused, add the current break time
-      const currentBreakDuration = now - timerData.pauseStartTime;
-      finalBreakSeconds = Math.floor((timerData.totalBreakTime + currentBreakDuration) / 1000);
-      finalSubjectSeconds = Math.floor(timerData.totalSubjectTime / 1000);
-    } else {
-      // If we're running, add the current subject time
-      const elapsedSinceStart = now - timerData.startTime - timerData.totalPauseTime;
-      finalSubjectSeconds = Math.floor(elapsedSinceStart / 1000);
-      finalBreakSeconds = Math.floor(timerData.totalBreakTime / 1000);
-    }
-    
-    // Get formatted times
-    const formattedSubjectTime = formatSecondsToTime(finalSubjectSeconds);
-    const formattedBreakTime = formatSecondsToTime(finalBreakSeconds);
-    
-    // Gather timer data from main timer
+    // Get total and active time directly from timer
     const totalTimeWithPauses = timerRef.current.getTotalElapsedTimeWithPauses();
     const activeTime = timerRef.current.getTotalActiveTime();
     const totalSecondsWithPauses = timerRef.current.getTotalElapsedTimeWithPausesInSeconds();
     const activeTimeSeconds = timerRef.current.getTotalActiveTimeInSeconds();
-
-    // Log data (this would typically be saved to a database)
-    // console.log('Toplam geçen süre (durdurma süreleri dahil):', totalTimeWithPauses);
-    // console.log('Aktif çalışma süresi (durdurma süreleri hariç):', activeTime);
-    // console.log('Konu çalışma süresi:', formattedSubjectTime);
-    // console.log('Mola süresi:', formattedBreakTime);
-    // console.log('Toplam saniye (durdurma dahil):', totalSecondsWithPauses);
-    // console.log('Aktif çalışma süresi (saniye):', activeTimeSeconds);
-    // console.log('Konu çalışma süresi (saniye):', finalSubjectSeconds);
-    // console.log('Mola süresi (saniye):', finalBreakSeconds);
     
+    // Use our accurately tracked break time instead of calculating the difference
+    const breakTimeSeconds = breakSeconds;
+    const formattedBreakTime = formatSecondsToTime(breakTimeSeconds);
+
     // Format data for database storage
     const sessionData = {
       totalTimeSeconds: totalSecondsWithPauses,
       activeTimeSeconds: activeTimeSeconds,
-      subjectTimeSeconds: finalSubjectSeconds,
-      breakTimeSeconds: finalBreakSeconds,
+      breakTimeSeconds: breakTimeSeconds,
       formattedTotalTime: totalTimeWithPauses,
       formattedActiveTime: activeTime,
-      formattedSubjectTime: formattedSubjectTime,
       formattedBreakTime: formattedBreakTime,
       endedAt: new Date().toISOString()
     };
     
     console.log('Veritabanına kaydedilecek veri:', sessionData);
 
-    // Reset all timer states
+    // Reset all timer states efficiently
     timerRef.current.stop();
     timerRef.current.reset();
     
-    // Reset timing data
+    // Reset timing data with a clean object for better garbage collection
     timerDataRef.current = {
       startTime: 0,
       pauseStartTime: 0,
       totalPauseTime: 0,
-      totalSubjectTime: 0,
       totalBreakTime: 0,
+      lastUpdateTime: 0,
       isRunning: false
     };
     
+    // Batch state updates
     setTime(null);
     setIsPaused(false);
-    setSubjectTime("00:00:00");
     setBreakTime("00:00:00");
-  }, [isPaused]);
+    setBreakSeconds(0);
+  }, [stopBreakInterval, breakSeconds]);
 
-  // Create the context value object
-  const contextValue: TimerContextType = {
+  // Memoize the context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo(() => ({
     timer: timerRef.current,
     time,
     isPaused,
-    subjectTime,
     breakTime,
     startTimer,
     stopTimer,
     resetTimer,
     finishTimer
-  };
+  }), [time, isPaused, breakTime, startTimer, stopTimer, resetTimer, finishTimer]);
 
   return (
     <TimerContext.Provider value={contextValue}>
