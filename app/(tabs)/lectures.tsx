@@ -1,15 +1,28 @@
 import { useState, useRef, useMemo, useCallback, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
 import { BottomSheetModal, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import * as Haptics from 'expo-haptics';
+import { format, addDays, subDays, parseISO } from 'date-fns';
+import { tr } from 'date-fns/locale';
+
+type ApiLecture = {
+  _id: string;
+  lecture: string;
+  solved: number;
+  solvedAt: string;
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 type Lecture = {
-  id: number;
+  id: string;
   subject: string;
   score: number;
   date: string;
+  rawDate: Date;
 };
 
 type SortField = "subject" | "score" | "date";
@@ -17,28 +30,132 @@ type SortDirection = "asc" | "desc";
 
 export default function LecturesScreen() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [lectures, setLectures] = useState<Lecture[]>([
-    { id: 1, subject: "Matematik", score: 66, date: "24 Mar 25" },
-    { id: 2, subject: "Deneme", score: 20, date: "23 Mar 25" },
-    { id: 3, subject: "Deneme", score: 70, date: "22 Mar 25" },
-    { id: 4, subject: "Matematik", score: 70, date: "21 Mar 25" },
-    { id: 5, subject: "Fizik", score: 50, date: "21 Mar 25" },
-    { id: 6, subject: "Fizik", score: 50, date: "17 Mar 25" },
-  ]);
+  const [lectures, setLectures] = useState<Lecture[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
 
+  // Date range state
+  const [fromDate, setFromDate] = useState<Date>(() => {
+    const date = new Date();
+    return subDays(date, 7); // Default: 1 week ago
+  });
+  const [toDate, setToDate] = useState<Date>(() => new Date()); // Default: today
+
+  // Temporary dates for the date picker
+  const [tempFromDate, setTempFromDate] = useState<Date>(() => {
+    const date = new Date();
+    return subDays(date, 7);
+  });
+  const [tempToDate, setTempToDate] = useState<Date>(() => new Date());
+
+  // Date picker modal
+  const datePickerModalRef = useRef<BottomSheetModal>(null);
+  const [isSelectingFromDate, setIsSelectingFromDate] = useState(true);
+
   // Bottom sheet ref and snap points
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const snapPoints = useMemo(() => ["32%"], []);
-  // Why 33%? Because I'm an ultra super super maxium premium plus pro senior designer and that's the way I wanted it to be.
+  const datePickerSnapPoints = useMemo(() => ["45%"], []);
 
-  // Debug log for checking modal ref
-  useEffect(() => {
-    console.log("BottomSheetModal Ref:", bottomSheetModalRef.current);
+  // Fetch data from the API - Make this function NOT depend on state values
+  const fetchLecturesWithDates = useCallback(async (from: Date, to: Date) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const fromDateISO = from.toISOString();
+      const toDateISO = to.toISOString();
+
+      const url = `https://sorucoz.grkn.dev/api/lectures?from=${fromDateISO}&to=${toDateISO}`;
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+
+      if (!responseData.data || !Array.isArray(responseData.data)) {
+        throw new Error('Invalid API response format');
+      }
+
+      // Transform API data into our Lecture format
+      const formattedLectures: Lecture[] = responseData.data.map((item: ApiLecture) => {
+        const date = parseISO(item.solvedAt);
+        return {
+          id: item.id,
+          subject: item.lecture,
+          score: item.solved,
+          date: format(date, 'dd MMM yy', { locale: tr }),
+          rawDate: date
+        };
+      });
+
+      setLectures(formattedLectures);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  // Wrapper function to fetch data with current date state
+  const fetchLectures = useCallback(() => {
+    return fetchLecturesWithDates(fromDate, toDate);
+  }, [fetchLecturesWithDates, fromDate, toDate]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchLectures();
+  }, []); // Only on mount
+
+  const handleDateChange = (days: number, isFrom: boolean) => {
+    if (isFrom) {
+      const newDate = addDays(tempFromDate, days);
+      // Prevent tempFromDate from being after tempToDate
+      if (newDate <= tempToDate) {
+        setTempFromDate(newDate);
+      }
+    } else {
+      const newDate = addDays(tempToDate, days);
+      // Prevent tempToDate from being before tempFromDate
+      if (newDate >= tempFromDate) {
+        setTempToDate(newDate);
+      }
+    }
+  };
+
+  const handlePresentDatePicker = (isFrom: boolean) => {
+    // When opening date picker, initialize temp dates with current actual dates
+    setTempFromDate(fromDate);
+    setTempToDate(toDate);
+    setIsSelectingFromDate(isFrom);
+    datePickerModalRef.current?.present();
+  };
+
+  const handleApplyDateChange = () => {
+    // Apply temp dates to actual dates and fetch data
+    // Set the new date values
+    setFromDate(tempFromDate);
+    setToDate(tempToDate);
+
+    // Dismiss the modal
+    datePickerModalRef.current?.dismiss();
+
+    // Add a small delay to ensure the modal is dismissed first
+    setTimeout(() => {
+      // Fetch with the new dates directly rather than using the state values
+      // which might not have updated yet due to React's batching
+      fetchLecturesWithDates(tempFromDate, tempToDate);
+    }, 300);
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
 
   const handlePresentModalPress = useCallback((lecture: Lecture) => {
     try {
@@ -47,10 +164,10 @@ export default function LecturesScreen() {
       if (bottomSheetModalRef.current) {
         bottomSheetModalRef.current.present();
       } else {
-        console.error("bottomSheetModalRef.current is null");
+        // Modal reference is null
       }
     } catch (error) {
-      console.error("Error presenting bottom sheet:", error);
+      // Error handling
     }
   }, []);
 
@@ -92,7 +209,13 @@ export default function LecturesScreen() {
   const getSortedData = () => {
     const sortedData = [...lectures];
 
-    sortedData.sort((a, b) => {
+    // Filter by search query
+    const filteredData = searchQuery
+      ? sortedData.filter(lecture =>
+        lecture.subject.toLowerCase().includes(searchQuery.toLowerCase()))
+      : sortedData;
+
+    filteredData.sort((a, b) => {
       if (sortField === "subject") {
         return sortDirection === "asc"
           ? a.subject.localeCompare(b.subject)
@@ -102,26 +225,13 @@ export default function LecturesScreen() {
           ? a.score - b.score
           : b.score - a.score;
       } else { // date
-        // Converting DD MMM YY format to a comparable date for sorting
-        const parseDate = (dateStr: string) => {
-          const [day, month, year] = dateStr.split(" ");
-          const monthMap: { [key: string]: number } = {
-            "Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5,
-            "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9, "Nov": 10, "Dec": 11
-          };
-          return new Date(parseInt(`20${year}`), monthMap[month], parseInt(day));
-        };
-
-        const dateA = parseDate(a.date);
-        const dateB = parseDate(b.date);
-
         return sortDirection === "asc"
-          ? dateA.getTime() - dateB.getTime()
-          : dateB.getTime() - dateA.getTime();
+          ? a.rawDate.getTime() - b.rawDate.getTime()
+          : b.rawDate.getTime() - a.rawDate.getTime();
       }
     });
 
-    return sortedData;
+    return filteredData;
   };
 
   const sortedLectures = getSortedData();
@@ -136,7 +246,6 @@ export default function LecturesScreen() {
 
   const handleEdit = (lecture: Lecture) => {
     // In a real app, you might open a modal or navigate to an edit screen
-    console.log("Edit lecture:", lecture);
   };
 
   const renderRightActions = (lecture: Lecture) => {
@@ -181,12 +290,29 @@ export default function LecturesScreen() {
     </View>
   );
 
-  // Test button to manually trigger the modal
-  const testModal = () => {
-    if (lectures.length > 0) {
-      handlePresentModalPress(lectures[0]);
-    }
-  };
+  const renderDateSelector = () => (
+    <View className="flex-row gap-2 mb-4">
+      <TouchableOpacity
+        className="flex-1 flex-row items-center justify-center gap-2 bg-gray-100 rounded-xl px-3 py-2"
+        onPress={() => handlePresentDatePicker(true)}
+      >
+        <Text className="text-gray-700 text-sm">Başlangıç:</Text>
+        <View className="flex-row items-center">
+          <Text className="text-gray-800 font-medium">{format(fromDate, 'dd MMM yyyy', { locale: tr })}</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        className="flex-1 flex-row items-center justify-center gap-2 bg-gray-100 rounded-xl px-3 py-2"
+        onPress={() => handlePresentDatePicker(false)}
+      >
+        <Text className="text-gray-700 text-sm">Bitiş:</Text>
+        <View className="flex-row items-center">
+          <Text className="text-gray-800 font-medium">{format(toDate, 'dd MMM yyyy', { locale: tr })}</Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View className="flex-1 bg-white px-4 py-4">
@@ -201,26 +327,59 @@ export default function LecturesScreen() {
             placeholderTextColor="#999"
           />
         </View>
+        <TouchableOpacity
+          className="bg-blue-500 rounded-xl px-3 py-2 items-center justify-center"
+          onPress={() => fetchLectures()}
+        >
+          <Ionicons name="refresh-outline" size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 rounded-xl overflow-hidden mb-4 border border-gray-200">
-        {renderHeader()}
+      {renderDateSelector()}
 
-        {sortedLectures.map((lecture) => (
-          <Swipeable
-            key={lecture.id}
-            renderRightActions={() => renderRightActions(lecture)}
-            friction={2}
-            overshootRight={false}
+      {isLoading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#0284c7" />
+          <Text className="text-gray-600 mt-4">Veriler yükleniyor...</Text>
+        </View>
+      ) : error ? (
+        <View className="flex-1 justify-center items-center">
+          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Text className="text-red-500 text-center mt-4">Bir hata oluştu</Text>
+          <Text className="text-gray-600 text-center mt-2">{error}</Text>
+          <TouchableOpacity
+            className="mt-6 bg-blue-500 py-2 px-6 rounded-lg"
+            onPress={() => fetchLectures()}
           >
-            <View className="flex-row py-3 px-4 bg-white border-b border-b-gray-200">
-              <Text className="flex-1 text-gray-800">{lecture.subject}</Text>
-              <Text className="flex-1 text-gray-800">{lecture.score}</Text>
-              <Text className="flex-1 text-gray-800">{lecture.date}</Text>
-            </View>
-          </Swipeable>
-        ))}
-      </ScrollView>
+            <Text className="text-white">Tekrar Dene</Text>
+          </TouchableOpacity>
+        </View>
+      ) : sortedLectures.length === 0 ? (
+        <View className="flex-1 justify-center items-center">
+          <Ionicons name="document-outline" size={48} color="#9ca3af" />
+          <Text className="text-gray-500 text-center mt-4">Kayıt bulunamadı</Text>
+          <Text className="text-gray-400 text-center mt-2">Seçilen tarih aralığında veri yok</Text>
+        </View>
+      ) : (
+        <ScrollView className="flex-1 rounded-xl overflow-hidden mb-4 border border-gray-200">
+          {renderHeader()}
+
+          {sortedLectures.map((lecture) => (
+            <Swipeable
+              key={lecture.id}
+              renderRightActions={() => renderRightActions(lecture)}
+              friction={2}
+              overshootRight={false}
+            >
+              <View className="flex-row py-3 px-4 bg-white border-b border-b-gray-200">
+                <Text className="flex-1 text-gray-800">{lecture.subject}</Text>
+                <Text className="flex-1 text-gray-800">{lecture.score}</Text>
+                <Text className="flex-1 text-gray-800">{lecture.date}</Text>
+              </View>
+            </Swipeable>
+          ))}
+        </ScrollView>
+      )}
 
       <View className="flex-row justify-between items-center py-3">
         <Text className="text-gray-500 text-xs">
@@ -276,6 +435,94 @@ export default function LecturesScreen() {
               <Text className="text-white font-medium">Sil</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </BottomSheetModal>
+
+      {/* Date Picker Bottom Sheet */}
+      <BottomSheetModal
+        ref={datePickerModalRef}
+        index={0}
+        snapPoints={datePickerSnapPoints}
+        backdropComponent={renderBackdrop}
+        enablePanDownToClose
+        enableDynamicSizing={false}
+      >
+        <View className="flex-1 p-6">
+          <Text className="text-xl font-medium text-gray-800 mb-6">
+            {isSelectingFromDate ? 'Başlangıç Tarihi' : 'Bitiş Tarihi'}
+          </Text>
+
+          <View className="flex-row justify-between items-center mb-8">
+            <Text className="text-xl font-bold text-gray-800">
+              {format(isSelectingFromDate ? tempFromDate : tempToDate, 'dd MMMM yyyy', { locale: tr })}
+            </Text>
+
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                className="bg-gray-100 p-2 rounded-full"
+                onPress={() => handleDateChange(-1, isSelectingFromDate)}
+              >
+                <Ionicons name="chevron-back" size={24} color="#666" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="bg-gray-100 p-2 rounded-full"
+                onPress={() => handleDateChange(1, isSelectingFromDate)}
+              >
+                <Ionicons name="chevron-forward" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View className="flex-row justify-between mb-8">
+            <TouchableOpacity
+              className="bg-gray-200 px-4 py-2 rounded-lg"
+              onPress={() => {
+                const today = new Date();
+                if (isSelectingFromDate) {
+                  setTempFromDate(today);
+                } else {
+                  setTempToDate(today);
+                }
+              }}
+            >
+              <Text className="text-gray-800">Bugün</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="bg-gray-200 px-4 py-2 rounded-lg"
+              onPress={() => {
+                const yesterday = subDays(new Date(), 1);
+                if (isSelectingFromDate) {
+                  setTempFromDate(yesterday);
+                } else {
+                  setTempToDate(yesterday);
+                }
+              }}
+            >
+              <Text className="text-gray-800">Dün</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="bg-gray-200 px-4 py-2 rounded-lg"
+              onPress={() => {
+                const lastWeek = subDays(new Date(), 7);
+                if (isSelectingFromDate) {
+                  setTempFromDate(lastWeek);
+                } else {
+                  setTempToDate(lastWeek);
+                }
+              }}
+            >
+              <Text className="text-gray-800">1 Hafta Önce</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            className="py-4 rounded-lg bg-blue-500 w-full items-center"
+            onPress={handleApplyDateChange}
+          >
+            <Text className="text-white font-medium">Uygula</Text>
+          </TouchableOpacity>
         </View>
       </BottomSheetModal>
     </View>
