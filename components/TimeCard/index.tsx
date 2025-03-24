@@ -52,7 +52,7 @@ export default function TimeCard() {
                             className="py-2 px-4 flex flex-row items-center justify-center gap-1 rounded-xl"
                         >
                             <View className='-top-1'>
-                                <Icons name="CirclePlay" size={24} color="#3b82f6" />
+                                <Icons name="Play" size={16} strokeWidth={2.5} color="#3b82f6" />
                             </View>
                             <Text variant="xl" className="text-blue-500">Başlat</Text>
                         </TouchableOpacity>
