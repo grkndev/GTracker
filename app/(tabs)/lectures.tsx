@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert } from "react-native";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Swipeable } from "react-native-gesture-handler";
+import { BottomSheetModal, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
+import * as Haptics from 'expo-haptics';
 
 type Lecture = {
   id: number;
@@ -26,6 +28,42 @@ export default function LecturesScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [selectedLecture, setSelectedLecture] = useState<Lecture | null>(null);
+
+  // Bottom sheet ref and snap points
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+  const snapPoints = useMemo(() => ["32%"], []);
+  // Why 33%? Because I'm an ultra super super maxium premium plus pro senior designer and that's the way I wanted it to be.
+
+  // Debug log for checking modal ref
+  useEffect(() => {
+    console.log("BottomSheetModal Ref:", bottomSheetModalRef.current);
+  }, []);
+
+  const handlePresentModalPress = useCallback((lecture: Lecture) => {
+    try {
+      setSelectedLecture(lecture);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (bottomSheetModalRef.current) {
+        bottomSheetModalRef.current.present();
+      } else {
+        console.error("bottomSheetModalRef.current is null");
+      }
+    } catch (error) {
+      console.error("Error presenting bottom sheet:", error);
+    }
+  }, []);
+
+  const handleSheetChanges = useCallback((index: number) => {
+    if (index === -1) {
+      setSelectedLecture(null);
+    }
+  }, []);
+
+  const renderBackdrop = useCallback(
+    (props: any) => <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />,
+    []
+  );
 
   const totalRecords = lectures.length;
 
@@ -88,38 +126,17 @@ export default function LecturesScreen() {
 
   const sortedLectures = getSortedData();
 
-  const handleDelete = (id: number) => {
-    Alert.alert(
-      "Kaydı Sil",
-      "Bu kaydı silmek istediğinizden emin misiniz?",
-      [
-        {
-          text: "İptal",
-          style: "cancel"
-        },
-        {
-          text: "Sil",
-          onPress: () => {
-            setLectures(prevLectures => prevLectures.filter(lecture => lecture.id !== id));
-          },
-          style: "destructive"
-        }
-      ]
-    );
+  const handleDelete = () => {
+    if (selectedLecture) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setLectures(prevLectures => prevLectures.filter(lecture => lecture.id !== selectedLecture.id));
+      bottomSheetModalRef.current?.dismiss();
+    }
   };
 
   const handleEdit = (lecture: Lecture) => {
     // In a real app, you might open a modal or navigate to an edit screen
-    Alert.alert(
-      "Düzenle",
-      `${lecture.subject} dersini düzenle`,
-      [
-        {
-          text: "İptal",
-          style: "cancel"
-        }
-      ]
-    );
+    console.log("Edit lecture:", lecture);
   };
 
   const renderRightActions = (lecture: Lecture) => {
@@ -133,7 +150,7 @@ export default function LecturesScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           className="bg-red-500 justify-center items-center px-4"
-          onPress={() => handleDelete(lecture.id)}
+          onPress={() => handlePresentModalPress(lecture)}
         >
           <Ionicons name="trash-outline" size={16} color="#fff" />
         </TouchableOpacity>
@@ -164,6 +181,13 @@ export default function LecturesScreen() {
     </View>
   );
 
+  // Test button to manually trigger the modal
+  const testModal = () => {
+    if (lectures.length > 0) {
+      handlePresentModalPress(lectures[0]);
+    }
+  };
+
   return (
     <View className="flex-1 bg-white px-4 py-4">
       <View className="flex-row mb-4 gap-3">
@@ -177,7 +201,6 @@ export default function LecturesScreen() {
             placeholderTextColor="#999"
           />
         </View>
-
       </View>
 
       <ScrollView className="flex-1 rounded-xl overflow-hidden mb-4 border border-gray-200">
@@ -223,6 +246,38 @@ export default function LecturesScreen() {
           </View>
         </View>
       </View>
+
+      {/* Delete Confirmation Bottom Sheet */}
+      <BottomSheetModal
+        ref={bottomSheetModalRef}
+        index={0}
+        snapPoints={snapPoints}
+        enableDynamicSizing={false}
+        backdropComponent={renderBackdrop}
+        onChange={handleSheetChanges}
+        enablePanDownToClose
+      >
+        <View className="flex-1 p-6 ">
+          <Text className="text-xl font-medium text-gray-800 mb-2">Kaydı Sil</Text>
+          <Text className="text-gray-600 mb-6">
+            {selectedLecture ? `"${selectedLecture.subject}" kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.` : ''}
+          </Text>
+          <View className="flex-col justify-center items-center w-full gap-4">
+            <TouchableOpacity
+              onPress={() => bottomSheetModalRef.current?.dismiss()}
+              className="py-4 rounded-lg bg-gray-200 w-full items-center"
+            >
+              <Text className="text-gray-800 font-medium">İptal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              className="py-4 rounded-lg bg-red-500 w-full items-center"
+            >
+              <Text className="text-white font-medium">Sil</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </BottomSheetModal>
     </View>
   );
 }
